@@ -89,7 +89,7 @@
 </main>
 
 <script>
-  const FOLDER = "certificates";
+  const FOLDER = "/certificates";
   const EXTENSIONS = ["pdf", "png", "jpg", "jpeg", "webp"];
 
   const $ = id => document.getElementById(id);
@@ -204,7 +204,10 @@
     search(v);
   });
 
-  const q = new URLSearchParams(location.search).get("name");
+  // Works with ?name=Nitish%20Kumar and with a clean link like /nitish-kumar
+  const seg = decodeURIComponent(location.pathname.replace(/^\/+|\/+$/g, ""));
+  const fromPath = (seg && !seg.includes("/") && !seg.includes(".")) ? seg.replace(/[-_]+/g, " ") : "";
+  const q = new URLSearchParams(location.search).get("name") || fromPath;
   if(q){ input.value = q; search(q); }
 </script>
 </body>
