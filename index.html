@@ -54,7 +54,9 @@
   #result{display:none; order:-1}
   #result.show{display:block}
   .sheet img{display:block; width:100%; height:auto}
-  .sheet iframe{display:block; width:100%; height:85vh; min-height:480px; border:0; background:#fff}
+  .sheet{background:#fff}
+  .sheet canvas{display:block; width:100%; height:auto; background:#fff}
+  .sheet .fallback{padding:24px 0; color:var(--muted)}
   .actions{display:flex; gap:10px; flex-wrap:wrap; margin:16px 0 28px}
   .actions .btn{padding:12px 20px}
 
@@ -123,6 +125,42 @@
     return null;
   }
 
+  const PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+  const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+  function loadPdfJs(){
+    return new Promise((resolve, reject) => {
+      if(window.pdfjsLib) return resolve(window.pdfjsLib);
+      const t = document.createElement("script");
+      t.src = PDFJS;
+      t.onload = () => {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+        resolve(window.pdfjsLib);
+      };
+      t.onerror = reject;
+      document.head.appendChild(t);
+    });
+  }
+
+  // Draw every PDF page on a white canvas, full width, starting at the top
+  async function renderPdf(url){
+    const lib = await loadPdfJs();
+    const pdf = await lib.getDocument(url).promise;
+    const width = sheet.clientWidth || document.documentElement.clientWidth;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    for(let n = 1; n <= pdf.numPages; n++){
+      const page = await pdf.getPage(n);
+      const base = page.getViewport({scale:1});
+      const vp = page.getViewport({scale:(width / base.width) * dpr});
+      const c = document.createElement("canvas");
+      c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+      sheet.appendChild(c);
+      await page.render({canvasContext:ctx, viewport:vp}).promise;
+    }
+  }
+
   function setStatus(msg, isError){
     statusEl.textContent = msg;
     statusEl.className = isError ? "error" : "";
@@ -139,10 +177,14 @@
       return;
     }
     setStatus("");
+    result.classList.add("show");
+    document.body.classList.add("found");
     if(found.ext === "pdf"){
-      const f = document.createElement("iframe");
-      f.src = found.url; f.title = "Certificate of " + name.trim();
-      sheet.appendChild(f);
+      try{
+        await renderPdf(found.url);
+      }catch(e){
+        sheet.innerHTML = '<p class="fallback">Preview could not load. Use Open in new tab or Download below.</p>';
+      }
     }else{
       const i = document.createElement("img");
       i.src = found.url; i.alt = "Certificate of " + name.trim();
@@ -151,8 +193,6 @@
     $("dl").href = found.url;
     $("dl").setAttribute("download", found.base + "." + found.ext);
     $("open").href = found.url;
-    result.classList.add("show");
-    document.body.classList.add("found");
     window.scrollTo(0, 0);
   }
 
