@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
+<meta name="theme-color" content="#ffffff">
 <title>Find your certificate</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -82,8 +83,7 @@
   <section id="result" aria-label="Certificate">
     <div class="sheet" id="sheet"></div>
     <div class="actions">
-      <a class="btn" id="dl" download>Download</a>
-      <a class="btn ghost" id="open" target="_blank" rel="noopener">Open in new tab</a>
+      <a class="btn" id="dl" href="#">Download</a>
     </div>
   </section>
 </main>
@@ -190,9 +190,17 @@
       i.src = found.url; i.alt = "Certificate of " + name.trim();
       sheet.appendChild(i);
     }
-    $("dl").href = found.url;
-    $("dl").setAttribute("download", found.base + "." + found.ext);
-    $("open").href = found.url;
+    $("dl").onclick = async e => {
+      e.preventDefault();
+      try{
+        const blob = await (await fetch(found.url)).blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = found.base + "." + found.ext;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      }catch(err){ setStatus("Download failed. Please try again.", true); }
+    };
     window.scrollTo(0, 0);
   }
 
