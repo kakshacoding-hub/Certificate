@@ -1,12 +1,4 @@
 {
-  "redirects": [
-    {
-      "source": "/certificates/:name([^/]+)\\.(png|jpg|jpeg|webp|pdf)",
-      "has": [{ "type": "header", "key": "sec-fetch-dest", "value": "document" }],
-      "destination": "/:name",
-      "permanent": false
-    }
-  ],
   "rewrites": [
     { "source": "/:name([^/.]+)", "destination": "/index.html" }
   ]
